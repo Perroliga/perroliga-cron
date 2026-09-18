@@ -1,0 +1,28 @@
+name: Actualizar Horarios Perroliga
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-cron-horarios:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4.2.2
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: '24'
+
+      - name: Instalar dependencias
+        run: npm install puppeteer
+
+      - name: Instalar binario de Chrome
+        run: npx puppeteer browsers install chrome
+
+      - name: Ejecutar script de horarios
+        env:
+          MI_CRON_KEY: ${{ secrets.CRON_KEY_HORARIOS }}
+        run: node runner_horarios.js
