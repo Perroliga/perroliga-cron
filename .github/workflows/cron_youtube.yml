@@ -25,4 +25,5 @@ jobs:
       - name: Ejecutar script de youtube
         env:
           MI_CRON_KEY: ${{ secrets.CRON_KEY_YOUTUBE }}
+          MI_WEB: ${{ secrets.WEB }}
         run: node runner_youtube.js
