@@ -25,5 +25,4 @@ jobs:
       - name: Ejecutar script de sincronización
         env:
           MI_CRON_KEY: ${{ secrets.CRON_KEY_PARTIDOS }}
-          MI_WEB: ${{ secrets.WEB }}
         run: node runner_partidos.js
