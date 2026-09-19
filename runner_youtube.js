@@ -18,7 +18,7 @@ const puppeteer = require('puppeteer');
   // Leer la clave desde la variable de entorno de GitHub Actions
   const cronKey = process.env.MI_CRON_KEY;
   const webKey = process.env.MI_WEB;
-  const url = `https://perroliga.wuaze.com/crons/cron_buscar_youtube.php?key=${cronKey}`;
+  const url = `${webKey}/crons/cron_buscar_youtube.php?key=${cronKey}`;
 
   try {
     console.log(`Navegando a: ${url}`);
