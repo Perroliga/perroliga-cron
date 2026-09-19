@@ -1,4 +1,4 @@
-name: Sincronizacion Perroliga
+name: Sincronizacion Partidos Perroliga
 
 on:
   workflow_dispatch:
