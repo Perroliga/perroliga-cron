@@ -25,4 +25,5 @@ jobs:
       - name: Ejecutar script de horarios
         env:
           MI_CRON_KEY: ${{ secrets.CRON_KEY_HORARIOS }}
+          MI_WEB: ${{ secrets.WEB }}
         run: node runner_horarios.js
