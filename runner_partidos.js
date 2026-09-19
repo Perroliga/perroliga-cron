@@ -17,7 +17,8 @@ const puppeteer = require('puppeteer');
 
   // Leer la clave desde la variable de entorno de GitHub Actions
   const cronKey = process.env.MI_CRON_KEY;
-  const url = `https://perroliga.wuaze.com/crons/cron_sincronizar_partidos.php?key=${cronKey}`;
+  const webKey = process.env.MI_WEB;
+  const url = `${webKey}/cron_sincronizar_partidos.php?key=${cronKey}`;
 
   try {
     console.log(`Navegando a: ${url}`);
