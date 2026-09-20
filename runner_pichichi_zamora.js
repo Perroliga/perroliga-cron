@@ -19,11 +19,11 @@ const puppeteer = require('puppeteer');
   const destinationUrl = `${webKey}/crons/actualizar_pichichi_zamora.php?key=${cronKey}`;
 
   try {
-    // 1. Primero navegamos a la raíz o a cualquier PHP para superar el reto aes.js y obtener la cookie __test
+    // 1. Superar la protección AES de InfinityFree navegando a la web
     console.log('Superando el filtro AES de InfinityFree...');
     await page.goto(webKey, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // 2. Extraer los datos de SofaScore directamente desde Node.js (SofaScore no tiene bloqueo AES)
+    // 2. Obtener datos de SofaScore directamente desde Node.js
     console.log('Obteniendo datos de SofaScore...');
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -55,26 +55,38 @@ const puppeteer = require('puppeteer');
         : 0
     }));
 
+    console.log(`Extraídos: ${pichichi.length} Pichichi, ${zamora.length} Zamora.`);
+
     const payload = { pichichi, zamora };
 
-    // 3. Hacer el POST a InfinityFree usando el navegador Puppeteer (que ya tiene la cookie autorizada)
+    // 3. Ejecutar POST desde dentro de Puppeteer esperando la respuesta explícita del servidor PHP
     console.log('Enviando datos procesados a InfinityFree...');
+    
     const respuestaServidor = await page.evaluate(async (url, data) => {
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      return await resp.text();
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        return await resp.text();
+      } catch (err) {
+        return 'Error en fetch interno: ' + err.message;
+      }
     }, destinationUrl, payload);
 
-    console.log('--- RESPUESTA DEL SERVIDOR ---');
+    console.log('--- RESPUESTA DEL SERVIDOR PHP ---');
     console.log(respuestaServidor);
 
   } catch (error) {
     console.error('Error durante la ejecución:', error);
     process.exit(1);
   } finally {
+    // Breve pausa para asegurar el cierre fluido del socket antes de matar Puppeteer
+    await new Promise(r => setTimeout(r, 2000));
     await browser.close();
   }
 })();
