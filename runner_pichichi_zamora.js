@@ -5,14 +5,24 @@ const puppeteer = require('puppeteer');
   
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: [
+      '--no-sandbox', 
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled' // Oculta que es un bot
+    ]
   });
   
   const page = await browser.newPage();
   
+  // Asignar un User-Agent moderno y real
   await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
   );
+
+  // Evitar la detección de webdriver
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+  });
 
   const cronKey = process.env.MI_CRON_KEY;
   const webKey = process.env.MI_WEB;
@@ -20,52 +30,48 @@ const puppeteer = require('puppeteer');
 
   try {
     // ------------------------------------------------------------------
-    // ETAPA 1: Obtener datos desde el contexto del dominio de SofaScore
+    // ETAPA 1: Obtener datos de Goles (Pichichi) mediante navegación
     // ------------------------------------------------------------------
-    console.log('Navegando a SofaScore para evitar bloqueos CORS...');
-    await page.goto('https://www.sofascore.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    console.log('Navegando a la API de Goles en SofaScore...');
+    const urlGoles = "https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goals";
+    await page.goto(urlGoles, { waitUntil: 'networkidle0', timeout: 30000 });
 
-    console.log('Obteniendo datos de la API de SofaScore...');
-    const payload = await page.evaluate(async () => {
-      const urlGoles = "https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goals";
-      const urlPorteros = "https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goalsConceded";
+    const rawGoles = await page.evaluate(() => document.body.innerText);
+    const dataGoles = JSON.parse(rawGoles);
 
-      const [resGoles, resPorteros] = await Promise.all([
-        fetch(urlGoles),
-        fetch(urlPorteros)
-      ]);
+    // ------------------------------------------------------------------
+    // ETAPA 2: Obtener datos de Porteros (Zamora) mediante navegación
+    // ------------------------------------------------------------------
+    console.log('Navegando a la API de Porteros en SofaScore...');
+    const urlPorteros = "https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goalsConceded";
+    await page.goto(urlPorteros, { waitUntil: 'networkidle0', timeout: 30000 });
 
-      if (!resGoles.ok || !resPorteros.ok) {
-        throw new Error(`SofaScore respondió con status: Goles=${resGoles.status}, Porteros=${resPorteros.status}`);
-      }
+    const rawPorteros = await page.evaluate(() => document.body.innerText);
+    const dataPorteros = JSON.parse(rawPorteros);
 
-      const dataGoles = await resGoles.json();
-      const dataPorteros = await resPorteros.json();
+    // Mapear y procesar resultados
+    const listaGoles = dataGoles.topPlayers || dataGoles.players || [];
+    const listaPorteros = dataPorteros.topPlayers || dataPorteros.players || [];
 
-      const listaGoles = dataGoles.topPlayers || dataGoles.players || [];
-      const listaPorteros = dataPorteros.topPlayers || dataPorteros.players || [];
+    const pichichi = listaGoles.slice(0, 10).map((item, index) => ({
+      posicion: index + 1,
+      jugador: item.player?.name || "Desconocido",
+      equipo: item.team?.name || "Desconocido",
+      goles: parseInt(item.statistics?.goals || item.value || 0)
+    }));
 
-      const pichichi = listaGoles.slice(0, 10).map((item, index) => ({
-        posicion: index + 1,
-        jugador: item.player?.name || "Desconocido",
-        equipo: item.team?.name || "Desconocido",
-        goles: parseInt(item.statistics?.goals || item.value || 0)
-      }));
+    const zamora = listaPorteros.slice(0, 10).map((item, index) => ({
+      posicion: index + 1,
+      jugador: item.player?.name || "Desconocido",
+      equipo: item.team?.name || "Desconocido",
+      goles_enc: parseInt(item.statistics?.goalsConceded || item.value || 0),
+      partidos: parseInt(item.statistics?.appearances || item.statistics?.matches || 0),
+      promedio_goles: (item.statistics?.appearances > 0) 
+        ? parseFloat((item.statistics.goalsConceded / item.statistics.appearances).toFixed(2)) 
+        : 0
+    }));
 
-      const zamora = listaPorteros.slice(0, 10).map((item, index) => ({
-        posicion: index + 1,
-        jugador: item.player?.name || "Desconocido",
-        equipo: item.team?.name || "Desconocido",
-        goles_enc: parseInt(item.statistics?.goalsConceded || item.value || 0),
-        partidos: parseInt(item.statistics?.appearances || item.statistics?.matches || 0),
-        promedio_goles: (item.statistics?.appearances > 0) 
-          ? parseFloat((item.statistics.goalsConceded / item.statistics.appearances).toFixed(2)) 
-          : 0
-      }));
-
-      return { pichichi, zamora };
-    });
-
+    const payload = { pichichi, zamora };
     console.log(` Extraídos: ${payload.pichichi.length} Pichichis y ${payload.zamora.length} Zamoras.`);
 
     if (payload.pichichi.length === 0) {
@@ -73,12 +79,12 @@ const puppeteer = require('puppeteer');
     }
 
     // ------------------------------------------------------------------
-    // ETAPA 2: Pasar el filtro AES de InfinityFree y enviar datos
+    // ETAPA 3: Pasar el filtro de InfinityFree y guardar
     // ------------------------------------------------------------------
-    console.log(`Navegando a tu servidor para pasar reto AES: ${destinationUrl}`);
+    console.log(`Navegando a tu servidor para superar reto AES: ${destinationUrl}`);
     await page.goto(destinationUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    console.log('Enviando datos al PHP de InfinityFree...');
+    console.log('Enviando datos al PHP...');
     const respuestaServidor = await page.evaluate(async (url, data) => {
       const resp = await fetch(url, {
         method: 'POST',
