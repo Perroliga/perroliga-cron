@@ -19,12 +19,13 @@ const puppeteer = require('puppeteer');
   const destinationUrl = `${webKey}/crons/actualizar_pichichi_zamora.php?key=${cronKey}`;
 
   try {
-    // 1. Superar el reto AES navegando a la web de destino
-    console.log(`Navegando a la URL del cron: ${destinationUrl}`);
-    await page.goto(destinationUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    // ------------------------------------------------------------------
+    // ETAPA 1: Obtener datos desde el contexto del dominio de SofaScore
+    // ------------------------------------------------------------------
+    console.log('Navegando a SofaScore para evitar bloqueos CORS...');
+    await page.goto('https://www.sofascore.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    // 2. Obtener los datos de SofaScore DENTRO de Puppeteer
-    console.log('Consultando API de SofaScore desde el navegador...');
+    console.log('Obteniendo datos de la API de SofaScore...');
     const payload = await page.evaluate(async () => {
       const urlGoles = "https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goals";
       const urlPorteros = "https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goalsConceded";
@@ -34,10 +35,13 @@ const puppeteer = require('puppeteer');
         fetch(urlPorteros)
       ]);
 
+      if (!resGoles.ok || !resPorteros.ok) {
+        throw new Error(`SofaScore respondió con status: Goles=${resGoles.status}, Porteros=${resPorteros.status}`);
+      }
+
       const dataGoles = await resGoles.json();
       const dataPorteros = await resPorteros.json();
 
-      // Extraer array de jugadores (SofaScore puede devolver 'topPlayers' o 'players')
       const listaGoles = dataGoles.topPlayers || dataGoles.players || [];
       const listaPorteros = dataPorteros.topPlayers || dataPorteros.players || [];
 
@@ -62,14 +66,19 @@ const puppeteer = require('puppeteer');
       return { pichichi, zamora };
     });
 
-    console.log(`Datos extraídos exitosamente: ${payload.pichichi.length} Pichichis y ${payload.zamora.length} Zamoras.`);
+    console.log(` Extraídos: ${payload.pichichi.length} Pichichis y ${payload.zamora.length} Zamoras.`);
 
     if (payload.pichichi.length === 0) {
-      console.warn('ADVERTENCIA: La lista de Pichichi se ha extraído vacía. Revisa la estructura devuelta por SofaScore.');
+      throw new Error('No se pudo extraer ningún jugador de SofaScore.');
     }
 
-    // 3. Enviar el POST a InfinityFree con la cookie AES activa
-    console.log('Enviando datos a InfinityFree...');
+    // ------------------------------------------------------------------
+    // ETAPA 2: Pasar el filtro AES de InfinityFree y enviar datos
+    // ------------------------------------------------------------------
+    console.log(`Navegando a tu servidor para pasar reto AES: ${destinationUrl}`);
+    await page.goto(destinationUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    console.log('Enviando datos al PHP de InfinityFree...');
     const respuestaServidor = await page.evaluate(async (url, data) => {
       const resp = await fetch(url, {
         method: 'POST',
@@ -83,10 +92,9 @@ const puppeteer = require('puppeteer');
     console.log(respuestaServidor);
 
   } catch (error) {
-    console.error('Error durante la ejecución:', error);
+    console.error(' Error durante la ejecución:', error.message);
     process.exit(1);
   } finally {
-    await new Promise(r => setTimeout(r, 1000));
     await browser.close();
   }
 })();
