@@ -1,0 +1,70 @@
+name: Actualizar Pichichi y Zamora
+
+on:
+  schedule:
+    # Se ejecuta automáticamente todos los días a las 06:00 UTC (8:00 hora de España)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde el botón de GitHub cuando quieras
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar datos de SofaScore y enviar a InfinityFree
+        run: |
+          node -e '
+          const CRON_KEY = "38DE6C9FA5509C44F0644521F00C0322";
+          const DESTINO = "http://perroliga.wuaze.com/crons/actualizar_pichichi_zamora.php?key=" + CRON_KEY;
+
+          async function ejecutar() {
+            try {
+              const headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+              };
+
+              const [resGoles, resPorteros] = await Promise.all([
+                fetch("https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goals", { headers }),
+                fetch("https://api.sofascore.com/api/v1/unique-tournament/8/season/61627/top-players/goalsConceded", { headers })
+              ]);
+
+              const dataGoles = await resGoles.json();
+              const dataPorteros = await resPorteros.json();
+
+              const pichichi = (dataGoles.topPlayers || []).slice(0, 10).map((item, index) => ({
+                posicion: index + 1,
+                jugador: item.player?.name || "Desconocido",
+                equipo: item.team?.name || "Desconocido",
+                goles: parseInt(item.statistics?.goals || 0)
+              }));
+
+              const zamora = (dataPorteros.topPlayers || []).slice(0, 10).map((item, index) => ({
+                posicion: index + 1,
+                jugador: item.player?.name || "Desconocido",
+                equipo: item.team?.name || "Desconocido",
+                goles_enc: parseInt(item.statistics?.goalsConceded || 0),
+                partidos: parseInt(item.statistics?.appearances || 0),
+                promedio_goles: item.statistics?.appearances > 0 
+                  ? parseFloat((item.statistics.goalsConceded / item.statistics.appearances).toFixed(2)) 
+                  : 0
+              }));
+
+              console.log(`Extraídos: ${pichichi.length} Pichichi, ${zamora.length} Zamora`);
+
+              const respPHP = await fetch(DESTINO, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pichichi, zamora })
+              });
+
+              const resultado = await respPHP.text();
+              console.log("Respuesta de InfinityFree:", resultado);
+
+            } catch (err) {
+              console.error("Error en la ejecución:", err);
+              process.exit(1);
+            }
+          }
+
+          ejecutar();
+          '
