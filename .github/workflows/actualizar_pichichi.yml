@@ -1,0 +1,32 @@
+name: Sincronizacion Pichichi y Zamora Perroliga
+
+on:
+  schedule:
+    # Se ejecuta automáticamente todos los días a las 06:00 UTC (08:00 hora España)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-cron:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4.2.2
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: '24'
+
+      - name: Instalar dependencias
+        run: npm install puppeteer
+
+      - name: Instalar binario de Chrome
+        run: npx puppeteer browsers install chrome
+
+      - name: Ejecutar script de sincronización
+        env:
+          MI_CRON_KEY: ${{ secrets.CRON_KEY_PICHICHI }}
+          MI_WEB: ${{ secrets.WEB }}
+        run: node runner_pichichi_zamora.js
