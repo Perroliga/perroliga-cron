@@ -98,6 +98,31 @@ for jugador in pichichis:
         f"ID equipo: {jugador['team_id']}"
     )
 
+# ---------------------------------------------------------
+# 4.5. GUARDAR RESULTADO EN JSON
+# ---------------------------------------------------------
+
+import json
+
+resultado_pichichi = {
+    "tipo": "pichichi",
+    "max_goles": max_goles,
+    "pichichis": [
+        {
+            "player_name": jugador["player_name"],
+            "team_name": jugador["team_name"],
+            "goles": jugador["value"],
+            "partidos": jugador["matches"],
+            "player_id": jugador["player_id"],
+            "team_id": jugador["team_id"]
+        }
+        for jugador in pichichis
+    ]
+}
+
+with open("resultado_pichichi.json", "w", encoding="utf-8") as archivo:
+    json.dump(resultado_pichichi, archivo, ensure_ascii=False, indent=2)
+
 
 # ---------------------------------------------------------
 # 5. TIEMPO TOTAL
