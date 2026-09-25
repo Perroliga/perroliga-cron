@@ -1,8 +1,9 @@
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import os
 
-API_TOKEN = "API_BZZOIRO"
+API_TOKEN = os.environ["API_BZZOIRO"]
 
 LIGA = 3
 TEMPORADA = 1307
