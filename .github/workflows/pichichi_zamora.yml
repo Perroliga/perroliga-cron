@@ -1,0 +1,30 @@
+name: Buscar Pichichi y Zamora
+
+on:
+  workflow_dispatch:
+
+jobs:
+  buscar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4.2.2
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Ejecutar Pichichi
+        env:
+          API_BZZOIRO: ${{ secrets.API_BZZOIRO }}
+        run: python pichichi_python.py
+
+      - name: Ejecutar Zamora
+        env:
+          API_BZZOIRO: ${{ secrets.API_BZZOIRO }}
+        run: python zamora_python.py
