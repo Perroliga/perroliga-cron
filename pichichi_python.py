@@ -1,7 +1,7 @@
 import requests
 import time
 
-API_TOKEN = "903e69ef2d691d1e470618432fde2c1d2eec0d5f"
+API_TOKEN = "API_BZZOIRO"
 
 LIGA = 3
 TEMPORADA = 1307
