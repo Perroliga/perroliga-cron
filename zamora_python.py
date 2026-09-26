@@ -221,6 +221,31 @@ for portero in zamoras:
         f"ID equipo: {portero['equipo_id']}"
     )
 
+# ---------------------------------------------------------
+# 6.5. GUARDAR RESULTADO EN JSON
+# ---------------------------------------------------------
+
+import json
+
+resultado_zamora = {
+    "tipo": "zamora",
+    "mejor_coeficiente": mejor_coeficiente,
+    "zamoras": [
+        {
+            "player_name": portero["jugador"],
+            "team_name": portero["equipo"],
+            "coeficiente": portero["coeficiente"],
+            "goles_recibidos": portero["goles"],
+            "partidos": portero["partidos"],
+            "player_id": portero["jugador_id"],
+            "team_id": portero["equipo_id"]
+        }
+        for portero in zamoras
+    ]
+}
+
+with open("resultado_zamora.json", "w", encoding="utf-8") as archivo:
+    json.dump(resultado_zamora, archivo, ensure_ascii=False, indent=2)
 
 # ---------------------------------------------------------
 # 7. TIEMPO TOTAL
