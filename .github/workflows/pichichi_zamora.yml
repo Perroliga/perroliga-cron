@@ -42,19 +42,9 @@ jobs:
           name: resultado-zamora
           path: resultado_zamora.json
 
-      - name: Enviar resultados a InfinityFree
-        env:
-          CLAVE_RESULTADOS: ${{ secrets.CLAVE_RESULTADOS }}
+      - name: Probar POST a InfinityFree
         run: |
-          jq -n \
-            --slurpfile pichichi resultado_pichichi.json \
-            --slurpfile zamora resultado_zamora.json \
-            '{pichichi: $pichichi[0], zamora: $zamora[0]}' \
-            > resultados_combinados.json
-
-          curl --fail-with-body --silent --show-error \
+          curl -v --max-time 30 \
             --request POST \
-            --header "Content-Type: application/json" \
-            --header "X-Result-Key: $CLAVE_RESULTADOS" \
-            --data-binary @resultados_combinados.json \
+            --data '' \
             https://perroliga.wuaze.com/crons/recibir_pichichi_zamora.php
