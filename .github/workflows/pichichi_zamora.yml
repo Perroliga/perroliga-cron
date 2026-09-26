@@ -34,3 +34,9 @@ jobs:
         env:
           API_BZZOIRO: ${{ secrets.API_BZZOIRO }}
         run: python zamora_python.py
+
+      - name: Guardar resultado Zamora
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-zamora
+          path: resultado_zamora.json
