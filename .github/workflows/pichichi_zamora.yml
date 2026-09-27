@@ -42,9 +42,3 @@ jobs:
           name: resultado-zamora
           path: resultado_zamora.json
 
-      - name: Probar POST a InfinityFree
-        run: |
-          curl -v --max-time 30 \
-            --request POST \
-            --data '' \
-            https://perroliga.wuaze.com/crons/recibir_pichichi_zamora.php
