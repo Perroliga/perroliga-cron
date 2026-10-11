@@ -162,7 +162,7 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 
 
 # ---------------------------------------------------------
-# 5. DETERMINAR ZAMORA (Criterio Marca: A menor coeficiente, y a igual/menor coeficiente, más partidos)
+# 5. DETERMINAR ZAMORA (Ordenación: más partidos y mejor coeficiente)
 # ---------------------------------------------------------
 
 # Si ya hay algún portero con 28 o más partidos, solo ellos pueden optar al Zamora.
@@ -175,7 +175,7 @@ porteros_28 = [
 if porteros_28:
     candidatos_zamora = porteros_28
 else:
-    # Todavía nadie llega a 28: provisional entre todos.
+    # Provisional entre todos
     candidatos_zamora = resultados
 
 if not candidatos_zamora:
@@ -183,23 +183,23 @@ if not candidatos_zamora:
     exit()
 
 # Ordenar los candidatos:
-# 1. Menor coeficiente (ascendente)
-# 2. Mayor número de partidos jugados (descendente) -> Para que a igualada o menor coeficiente, el que más partidos tenga esté arriba
+# 1. Mayor número de partidos jugados (descendente: -x["partidos"]) para priorizar al que más ha jugado.
+# 2. Menor coeficiente (ascendente: x["coeficiente"]) a igualdad de partidos.
 candidatos_ordenados = sorted(
     candidatos_zamora,
-    key=lambda x: (x["coeficiente"], -x["partidos"])
+    key=lambda x: (-x["partidos"], x["coeficiente"])
 )
 
-# El mejor coeficiente es el del primer puesto de la lista ordenada
+# El líder absoluto será el primero de esa lista ordenada
+mejor_partidos = candidatos_ordenados[0]["partidos"]
 mejor_coeficiente = candidatos_ordenados[0]["coeficiente"]
-max_partidos_lider = candidatos_ordenados[0]["partidos"]
 
-# Opcional: Si quieres que coja estrictamente al líder de esa lista ordenada (el número 1 de Marca)
-# o mantenga el criterio de empate si los valores coinciden exactos:
-zamoras = [candidatos_ordenados[0]]
-
-# Si quieres conservar la lógica de empates exactos (mismísimo coeficiente y mismísimos partidos):
-# zamoras = [p for p in candidatos_ordenados if abs(p["coeficiente"] - mejor_coeficiente) < 0.001 and p["partidos"] == max_partidos_lider]
+# Todos los que empaten exactamente con esos mismos partidos y coeficiente óptimo son Zamora
+zamoras = [
+    portero
+    for portero in candidatos_ordenados
+    if portero["partidos"] == mejor_partidos and abs(portero["coeficiente"] - mejor_coeficiente) < 0.001
+]
 
 
 # ---------------------------------------------------------
