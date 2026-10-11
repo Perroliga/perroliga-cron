@@ -162,11 +162,10 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 
 
 # ---------------------------------------------------------
-# 5. DETERMINAR ZAMORA
+# 5. DETERMINAR ZAMORA (Criterio Marca: A menor coeficiente, y a igual/menor coeficiente, más partidos)
 # ---------------------------------------------------------
 
-# Si ya hay algún portero con 28 o más partidos,
-# solo ellos pueden optar al Zamora.
+# Si ya hay algún portero con 28 o más partidos, solo ellos pueden optar al Zamora.
 porteros_28 = [
     portero
     for portero in resultados
@@ -176,24 +175,31 @@ porteros_28 = [
 if porteros_28:
     candidatos_zamora = porteros_28
 else:
-    # Todavía nadie llega a 28:
-    # Zamora provisional entre todos.
+    # Todavía nadie llega a 28: provisional entre todos.
     candidatos_zamora = resultados
 
+if not candidatos_zamora:
+    print("No hay candidatos válidos para el Zamora.")
+    exit()
 
-# Mejor coeficiente
-mejor_coeficiente = min(
-    portero["coeficiente"]
-    for portero in candidatos_zamora
+# Ordenar los candidatos:
+# 1. Menor coeficiente (ascendente)
+# 2. Mayor número de partidos jugados (descendente) -> Para que a igualada o menor coeficiente, el que más partidos tenga esté arriba
+candidatos_ordenados = sorted(
+    candidatos_zamora,
+    key=lambda x: (x["coeficiente"], -x["partidos"])
 )
 
+# El mejor coeficiente es el del primer puesto de la lista ordenada
+mejor_coeficiente = candidatos_ordenados[0]["coeficiente"]
+max_partidos_lider = candidatos_ordenados[0]["partidos"]
 
-# Todos los empatados son Zamora
-zamoras = [
-    portero
-    for portero in candidatos_zamora
-    if abs(portero["coeficiente"] - mejor_coeficiente) < 0.001
-]
+# Opcional: Si quieres que coja estrictamente al líder de esa lista ordenada (el número 1 de Marca)
+# o mantenga el criterio de empate si los valores coinciden exactos:
+zamoras = [candidatos_ordenados[0]]
+
+# Si quieres conservar la lógica de empates exactos (mismísimo coeficiente y mismísimos partidos):
+# zamoras = [p for p in candidatos_ordenados if abs(p["coeficiente"] - mejor_coeficiente) < 0.001 and p["partidos"] == max_partidos_lider]
 
 
 # ---------------------------------------------------------
