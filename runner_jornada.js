@@ -22,7 +22,7 @@ const puppeteer = require('puppeteer');
 
   try {
     console.log(`Navegando a: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 120000 });
     
     const bodyHTML = await page.evaluate(() => document.body.innerText);
     console.log('--- RESPUESTA DEL SERVIDOR ---');
