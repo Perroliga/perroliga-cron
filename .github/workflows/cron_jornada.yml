@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-cron-youtube:
+  run-cron-jornada:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +22,7 @@ jobs:
       - name: Instalar binario de Chrome
         run: npx puppeteer browsers install chrome
 
-      - name: Ejecutar script de youtube
+      - name: Ejecutar script del calculo de la jonrnada
         env:
           MI_CRON_KEY: ${{ secrets.CRON_KEY_JORNADA }}
           MI_WEB: ${{ secrets.WEB }}
