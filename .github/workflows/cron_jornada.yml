@@ -22,7 +22,7 @@ jobs:
       - name: Instalar binario de Chrome
         run: npx puppeteer browsers install chrome
 
-      - name: Ejecutar script del calculo de la jonrnada
+      - name: Ejecutar script del calculo de la jornada
         env:
           MI_CRON_KEY: ${{ secrets.CRON_KEY_JORNADA }}
           MI_WEB: ${{ secrets.WEB }}
