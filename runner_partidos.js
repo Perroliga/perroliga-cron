@@ -23,61 +23,78 @@ const dns = require('node:dns').promises;
 
   try {
 
-    // 1. Comprobar la resolución DNS
-    const hostname = new URL(url).hostname;
+    // 1. Comprobar DNS con hasta 5 intentos
+const hostname = new URL(url).hostname;
+let dnsResuelto = false;
 
-    console.log(`Comprobando DNS del dominio: ${hostname}`);
+for (let intento = 1; intento <= 5; intento++) {
+  try {
+    const resultadoDNS = await dns.lookup(hostname, { all: true });
 
-    try {
-      const resultadoDNS = await dns.lookup(hostname, { all: true });
-      console.log('DNS CORRECTO:', resultadoDNS);
+    console.log('DNS CORRECTO:', resultadoDNS);
+    dnsResuelto = true;
+    break;
 
-    } catch (errorDNS) {
-      console.error(
-        'FALLO EN LA RESOLUCIÓN DNS:',
-        errorDNS.code,
-        errorDNS.message
+  } catch (errorDNS) {
+    console.error(
+      `FALLO DNS ${intento}/5:`,
+      errorDNS.code,
+      errorDNS.message
+    );
+
+    if (intento === 5) {
+      throw new Error(
+        `No se pudo resolver ${hostname} después de 5 intentos.`
       );
     }
 
-    // 2. Intentar abrir la página hasta 3 veces si falla el DNS
-    console.log(`Navegando a: ${new URL(url).origin}${new URL(url).pathname}`);
+    const espera = intento * 5000;
 
-    for (let intento = 1; intento <= 3; intento++) {
+    console.warn(`Esperando ${espera / 1000} segundos...`);
 
-      try {
-        await page.goto(url, {
-          waitUntil: 'networkidle2',
-          timeout: 30000
-        });
+    await new Promise(resolve => setTimeout(resolve, espera));
+  }
+}
 
-        console.log('Página abierta correctamente.');
-        break;
+if (!dnsResuelto) {
+  throw new Error('No se ha podido resolver el dominio.');
+}
 
-      } catch (error) {
+// 2. Abrir la página con hasta 3 intentos
+console.log(`Navegando a: ${new URL(url).origin}${new URL(url).pathname}`);
 
-        const falloDNS = error.message.includes('ERR_NAME_NOT_RESOLVED');
+for (let intento = 1; intento <= 3; intento++) {
+  try {
+    await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 30000
+    });
 
-        if (!falloDNS || intento === 3) {
-          throw error;
-        }
+    console.log('Página abierta correctamente.');
+    break;
 
-        const espera = 2000 * intento;
+  } catch (error) {
+    const falloDNS = error.message.includes('ERR_NAME_NOT_RESOLVED');
 
-        console.warn(
-          `Fallo DNS en el intento ${intento}. Reintentando en ${espera / 1000} segundos...`
-        );
-
-        // Esperar antes del siguiente intento
-        await new Promise(resolve => setTimeout(resolve, espera));
-      }
+    if (!falloDNS || intento === 3) {
+      throw error;
     }
 
-    // 3. Mostrar la respuesta del cron PHP
-    const bodyHTML = await page.evaluate(() => document.body.innerText);
+    const espera = intento * 5000;
 
-    console.log('--- RESPUESTA DEL SERVIDOR ---');
-    console.log(bodyHTML);
+    console.warn(
+      `Fallo DNS en Puppeteer. Reintento ${intento}/3 en ${espera / 1000} segundos...`
+    );
+
+    await new Promise(resolve => setTimeout(resolve, espera));
+  }
+}
+
+// 3. Mostrar respuesta del cron PHP
+const bodyHTML = await page.evaluate(() => document.body.innerText);
+
+console.log('--- RESPUESTA DEL SERVIDOR ---');
+console.log(bodyHTML);
 
   } catch (error) {
 
